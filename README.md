@@ -5,6 +5,8 @@
 > **实测状态**：均已部署到 Cloudflare 全球网络并端到端验证，
 > 部署目标为 **Workers Free（免费）计划**，全程无需任何 LLM API key（使用 Workers AI）。
 
+参考文档：https://cloudflaredoc.ubitools.com/agents/
+
 ## 五个项目一览
 
 | 项目 | 能力 | 线上地址 | 实测状态 |

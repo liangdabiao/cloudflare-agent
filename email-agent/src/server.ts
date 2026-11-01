@@ -117,6 +117,95 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // ── 状态首页：展示端点用法 + 实时收件记录 ────────────────────
+    if (url.pathname === "/") {
+      const html = `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cloudflare Email Agent</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background:#0f1117; color:#e6e6e6; padding:32px 16px; }
+  main { max-width:720px; margin:0 auto; }
+  h1 { margin:0 0 4px; font-size:1.5rem; }
+  .sub { color:#888; font-size:.85rem; margin-bottom:24px; }
+  .card { background:#171a23; border:1px solid #262b38; border-radius:10px; padding:16px; margin-bottom:16px; }
+  code { background:#12141b; border-radius:6px; padding:2px 6px; font-size:.85rem; }
+  a { color:#9db4ff; }
+  input { background:#12141b; border:1px solid #2c3345; color:#e6e6e6;
+          border-radius:8px; padding:8px 10px; width:60%; font-size:.9rem; }
+  button { border:none; border-radius:8px; padding:8px 14px; background:#4c6ef5;
+           color:#fff; cursor:pointer; margin-left:8px; }
+  #out { margin-top:10px; font-size:.85rem; color:#9bd49b; white-space:pre-wrap; word-break:break-all; }
+  table { width:100%; border-collapse:collapse; font-size:.85rem; }
+  td, th { text-align:left; padding:6px 8px; border-bottom:1px solid #262b38; }
+  th { color:#888; font-weight:500; }
+  .empty { color:#666; }
+</style>
+</head>
+<body>
+<main>
+  <h1>📮 Cloudflare Email Agent</h1>
+  <p class="sub">出站签名发送 · 入站解析回复 · 地址路由 · 收件记录持久化（SQLite）</p>
+
+  <div class="card">
+    <strong>发一封测试邮件</strong>
+    <p style="font-size:.85rem;color:#888">收件地址需先在 Email Routing 的 Destination addresses 完成验证</p>
+    <input id="to" placeholder="you@example.com" />
+    <button onclick="send()">发送</button>
+    <div id="out"></div>
+  </div>
+
+  <div class="card">
+    <strong>收件记录</strong>
+    <p style="font-size:.85rem;color:#888">从任意邮箱发信到 <code>support@${env.AGENT_DOMAIN}</code>，Agent 会自动回信并记录到这里</p>
+    <div id="emails" class="empty">加载中…</div>
+  </div>
+
+  <div class="card">
+    <strong>API 端点</strong>
+    <p><code>GET /test-send?to=&lt;地址&gt;</code> — 触发出站欢迎邮件</p>
+    <p><code>GET /emails</code> — 收件记录 JSON</p>
+    <p style="color:#888">入站邮件由 Cloudflare Email Service 通过 <code>email()</code> handler 投递（catch-all 路由）</p>
+  </div>
+</main>
+<script>
+  async function send() {
+    const to = document.getElementById('to').value.trim();
+    const out = document.getElementById('out');
+    if (!to) { out.textContent = '请填写收件地址'; return; }
+    out.textContent = '发送中…';
+    try {
+      const r = await fetch('/test-send?to=' + encodeURIComponent(to));
+      const j = await r.json();
+      out.textContent = j.ok ? ('✅ 已发送，messageId: ' + j.messageId) : ('❌ ' + (j.error || r.status));
+    } catch (e) { out.textContent = '❌ ' + e.message; }
+  }
+  async function load() {
+    const el = document.getElementById('emails');
+    try {
+      const r = await fetch('/emails');
+      const list = await r.json();
+      if (!list.length) { el.textContent = '还没有收到邮件——发一封到 support@${env.AGENT_DOMAIN} 试试'; return; }
+      el.className = '';
+      el.innerHTML = '<table><tr><th>发件人</th><th>主题</th><th>时间</th></tr>' +
+        list.slice().reverse().map(e =>
+          '<tr><td>' + e.from + '</td><td>' + e.subject + '</td><td>' +
+          new Date(e.receivedAt).toLocaleString() + '</td></tr>').join('') + '</table>';
+    } catch (e) { el.textContent = '加载失败：' + e.message; }
+  }
+  load();
+</script>
+</body>
+</html>`;
+      return new Response(html, {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
+
     // ── 测试端点：触发出站邮件 ──────────────────────────────────
     // GET /test-send?to=you@example.com
     if (url.pathname === "/test-send") {
