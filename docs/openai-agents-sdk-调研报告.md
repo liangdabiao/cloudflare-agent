@@ -230,7 +230,74 @@ Agents SDK 是**库**，不是平台。你要自己回答三个 Cloudflare Agent
 
 ---
 
-## 九、参考资料
+## 九、补充调研：Pi harness —— Cloudflare 官方推荐的控制循环
+
+> 本文初版遗漏了这个维度，补充于 2026-11-02。
+> 结论：**在"控制循环（harness）"这一层，Pi 是 Cloudflare 官方推荐的新 Agent 起点**——
+> 它与 OpenAI Agents SDK 的 Runner 是同层竞争者，值得纳入选型对比。
+
+### 9.1 harness 是什么
+
+Agents SDK 文档把框架拆成两层：
+
+- **Runtime**（Agents SDK runtime）：agent "住在哪里、如何保持持久"——生命周期、路由、可安装能力（WebSocket、共享状态、调度、MCP）
+- **Harness**（控制循环）：agent "每一回合做什么"——构建 prompt、加载记忆、选工具、处理工具结果、流式响应、消息持久化、决定是否续跑
+
+### 9.2 官方 harness 清单与推荐
+
+| Harness | 状态 | 特点 |
+|---|---|---|
+| **Pi**（`PiHarness`） | **官方推荐**（first-class support） | 在 DO 内运行 Pi Durable，SQLite 存储 transcript/inbox/tasks，**崩溃/驱逐/重新部署后自动恢复**（durable execution） |
+| OpenCode（`OpenCodeHarness`） | 实验性 | 运行 OpenCode 2.0 的 Workerd SDK，含内置插件 |
+| Think | 提及 | 通过 SDK 的 Sessions 能力管理对话存储 |
+| 自建（**`AIChatAgent` 属于此类**） | 支持 | AIChatAgent + Sessions = 存储基础组件，循环自己写 |
+
+**重要澄清**：本仓库五个项目用的 `AIChatAgent` / `withVoice` 属于"自建 harness + Sessions 存储"类别——
+它依然是官方支持的合法路径（作为构建自建 harness 的基础组件），只是**不是官方为新建 Agent 推荐的默认起点**。
+
+### 9.3 Pi 的能力与限制（实测文档结论）
+
+能力：
+- `harness.prompt()` / `submit()+wait()`（`operationId` 幂等）/ `pending()` / `session.steer()`（中途转向）/ `sessions.create()/fork()/list()`
+- 事件流（`AgentEventStream`，snapshot + 增量），客户端可走 WebSocket / HTTP / RPC，**中途连接能拿到含部分答案的 snapshot**
+- 工具经 extension 注册，`replay: "safe"` 的工具崩溃恢复后可安全重放
+- 多模型：`pi-ai` 是统一多 provider LLM API（OpenAI / Anthropic / Google 等），且官方示例经
+  Agents SDK 的模型适配器直接用 Workers AI（示例默认 `@cf/zai-org/glm-5.3-flash`）
+
+限制（官方明示）：
+- ❌ **尚无工具调用的人工审批/权限步骤**——我们 chat-agent 的核心演示功能（needsApproval）迁不过去
+- 事件无游标回放；abort 需等会话空闲；单次模型流式调用超 15 分钟可能被切断；暂不能删除会话
+
+### 9.4 Pi vs OpenAI Agents SDK（循环层对比）
+
+| 维度 | Pi（PiHarness） | OpenAI Agents SDK（Runner） |
+|---|---|---|
+| 生态归属 | Cloudflare 全家桶（DO SQLite 深度集成） | OpenAI 生态（平台 Tracing / 托管工具） |
+| 持久执行 | ✅ 核心卖点：崩溃/驱逐后恢复，工作不丢 | ❌ 无（Python 有 Temporal 集成，JS 无） |
+| 会话中途转向（steer）/ fork | ✅ 内置 | ❌ |
+| 人工审批 | ❌ 尚无 | ✅ 官方 interrupt 模式 |
+| Guardrails | ❌ | ✅ |
+| 托管工具（web search/code interpreter） | ❌ | ✅ |
+| Tracing dashboard | ❌（事件流自己接） | ✅ 内置 |
+| 模型 | 多 provider（pi-ai）+ Workers AI 适配器 | OpenAI 优先，多模型经 LiteLLM/AI SDK 桥接 |
+| 费用 | 模型费用（Workers AI 可 $0） | OpenAI 计费 |
+
+### 9.5 对迁移建议的影响
+
+决策矩阵变成**三选一**（循环层）：
+
+1. **维持 AIChatAgent（现状）**：唯一支持"客户端工具 + 人工审批 + useAgentChat"完整组合的方案，
+   且五个项目已验证跑通——**若无新痛点不必动**
+2. **迁 Pi**：想要 durable execution（崩溃恢复/steer/fork）且**不需要人工审批**的新 Agent；
+   留在 Cloudflare 生态，模型可继续 Workers AI——与"迁 OpenAI"互斥（循环层二选一）
+3. **迁 OpenAI Agents SDK**：要 Tracing/托管工具/Guardrails/Handoffs，接受计费与 Workers 实验性支持
+
+对本仓库五案例：chat-agent 依赖审批与客户端工具（Pi 不支持），维持现状仍是正确选择；
+Pi 最适合的场景是**全新的、长时间运行、需要崩溃恢复的自治 Agent**（如后台研究/爬取类任务）。
+
+---
+
+## 十、参考资料
 
 - [openai/openai-agents-js（GitHub）](https://github.com/openai/openai-agents-js) — 运行时支持（Node 22+/Deno/Bun/Workers experimental）、临时 token 机制
 - [OpenAI Agents JS 文档](https://openai.github.io/openai-agents-js/) — Agent/Runner/Sessions/Handoffs/Guardrails/MCP/Realtime API
@@ -242,3 +309,6 @@ Agents SDK 是**库**，不是平台。你要自己回答三个 Cloudflare Agent
 - [AI SDK Agent 抽象](https://ai-sdk.dev/) 与 [vercel/ai#7939](https://github.com/vercel/ai/issues/7939) — JS 多模型桥接的粗糙边
 - [TrustVector：OpenAI Agents SDK 安全评估](https://trustvector.guard0.ai/agents/openai-agents-sdk)
 - [社区讨论：生产环境使用 Agents SDK](https://community.openai.com/t/voice-ai-people-are-you-using-agents-sdk-on-prod/1380748)
+- [Cloudflare Agents：Harnesses 总览](https://developers.cloudflare.com/agents/harnesses/) — Pi（推荐）/ OpenCode / Think / 自建
+- [Cloudflare Agents：Pi harness](https://developers.cloudflare.com/agents/harnesses/pi/) — PiHarness 用法、能力与限制
+- [earendil-works/pi（GitHub）](https://github.com/earendil-works/pi) — pi-ai 统一多 provider LLM API
