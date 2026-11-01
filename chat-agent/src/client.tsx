@@ -11,7 +11,7 @@
 import { useAgent } from "agents/react";
 import { useAgentChat, getToolApproval } from "@cloudflare/ai-chat/react";
 import type { DynamicToolUIPart, ToolUIPart, UIMessage } from "ai";
-import { StrictMode } from "react";
+import { StrictMode, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
@@ -36,6 +36,12 @@ function Chat() {
   // agent: "ChatAgent" 对应 wrangler.jsonc 中注册的 Durable Object 绑定名
   const agent = useAgent({ agent: "ChatAgent" });
 
+  // 客户端工具续跑护栏：
+  // 每次客户端工具返回结果都会自动发起一轮新请求（服务端 stopWhen 步数随之重置）。
+  // 若模型反复调用客户端工具，就会形成"工具→新请求→再调工具"的死循环。
+  // 这里限制单条用户消息最多自动续跑 3 轮，发送新消息时重置计数。
+  const toolRoundsRef = useRef(0);
+
   const {
     messages,
     sendMessage,
@@ -46,6 +52,8 @@ function Chat() {
     agent,
     // 处理客户端侧 tool（即服务端没有 execute 函数的 tool）
     onToolCall: async ({ toolCall, addToolOutput }) => {
+      if (toolRoundsRef.current >= 3) return; // 护栏：停止自动续跑
+      toolRoundsRef.current++;
       if (toolCall.toolName === "getUserTimezone") {
         addToolOutput({
           toolCallId: toolCall.toolCallId,
@@ -154,6 +162,7 @@ function Chat() {
           const input = e.currentTarget.elements.namedItem("message");
           if (!(input instanceof HTMLInputElement) || !input.value.trim())
             return;
+          toolRoundsRef.current = 0; // 新的用户消息：重置续跑计数
           sendMessage({ text: input.value });
           input.value = "";
         }}
@@ -166,7 +175,14 @@ function Chat() {
         <button type="submit" disabled={status === "streaming"}>
           {status === "streaming" ? "…" : "Send"}
         </button>
-        <button type="button" className="clear" onClick={clearHistory}>
+        <button
+          type="button"
+          className="clear"
+          onClick={() => {
+            toolRoundsRef.current = 0;
+            clearHistory();
+          }}
+        >
           Clear history
         </button>
       </form>

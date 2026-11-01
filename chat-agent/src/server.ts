@@ -32,8 +32,10 @@ export class ChatAgent extends AIChatAgent<Env> {
     const ai = createAI({ binding: this.env.AI });
 
     const result = streamText({
-      // 文档示例模型：Llama 4 Scout
-      model: ai("@cf/meta/llama-4-scout-17b-16e-instruct"),
+      // 模型选型实测：llama-4-scout 对无意义输入（如 "you!"）会进入工具死循环
+      // （且客户端工具续跑会重置步数计数器，stopWhen 管不住外层循环）。
+      // glm-4.7-flash 工具调用稳定（Free ✓），换之。
+      model: ai("@cf/zai-org/glm-4.7-flash"),
       system:
         "You are a helpful assistant. You can check the weather, " +
         "get the user's timezone, and run calculations.",

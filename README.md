@@ -180,6 +180,13 @@ curl -X PUT -H "Authorization: Bearer <token>" -H "Content-Type: application/jso
     经验：Slack 新版设置页的 React 表单对程序化输入不敏感，
     凡是能走 App Manifest 的配置优先走 Manifest。
 
+15. **客户端 tool 的自动续跑会绕过 `stopWhen`，形成死循环**
+    `stepCountIs(N)` 只限制单次请求内的步数；而客户端工具（无 execute）返回结果后
+    客户端会**自动发起全新请求，步数归零**。若模型（如 llama-4-scout）对某些输入
+    反复调用客户端工具，就是"工具→新请求→再调工具"的无限循环。
+    双重解法（见 chat-agent）：① 选工具调用稳定的模型（glm-4.7-flash）；
+    ② 客户端 `onToolCall` 里做续跑计数护栏（如每条用户消息最多 3 轮）。
+
 ## 官方参考（收录在仓库内）
 
 | 目录 | 说明 |

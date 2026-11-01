@@ -81,6 +81,11 @@ npm run deploy
 - 排查流式问题可以最小化复现：写一个只含 `streamText + textStream` 的临时 Worker，
   逐层排除 provider / 框架 / 模型的问题（本项目靠这招定位了 provider 重复 bug）
 
+**踩坑：客户端 tool 死循环**——实测输入 "you!" 时模型无限重复调用三类工具。
+机制：客户端工具返回结果会自动发起新请求（`stopWhen` 步数归零），外层循环无上限；
+llama-4-scout 对无意义输入又倾向乱调工具。修复：换 glm-4.7-flash + 客户端
+`onToolCall` 续跑计数护栏（`toolRoundsRef`，每条消息最多 3 轮，见 src/client.tsx）。
+
 ## 核心概念速查（学习重点）
 
 ### 服务端 `src/server.ts`
