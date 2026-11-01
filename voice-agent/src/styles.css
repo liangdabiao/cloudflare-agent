@@ -1,0 +1,159 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+  background: #0f1117;
+  color: #e6e6e6;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.status-panel {
+  background: #171a23;
+  border: 1px solid #262b38;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.status {
+  text-transform: capitalize;
+}
+
+.status-listening {
+  color: #4dabf7;
+}
+
+.status-thinking {
+  color: #fab005;
+}
+
+.status-speaking {
+  color: #51cf66;
+}
+
+.audio-level {
+  height: 6px;
+  background: #12141b;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.audio-level-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4dabf7, #51cf66);
+  transition: width 0.1s;
+}
+
+.call-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.error {
+  color: #ff6b6b;
+}
+
+.interim {
+  color: #888;
+  font-style: italic;
+  margin: 4px 0;
+}
+
+.messages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.empty {
+  color: #666;
+  background: #171a23;
+  border: 1px solid #262b38;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.message {
+  background: #171a23;
+  border: 1px solid #262b38;
+  border-radius: 10px;
+  padding: 12px 14px;
+  line-height: 1.6;
+  word-break: break-word;
+  margin: 0;
+}
+
+.message.user {
+  background: #1d2436;
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.composer input {
+  flex: 1;
+  background: #171a23;
+  border: 1px solid #2c3345;
+  color: #e6e6e6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 1rem;
+}
+
+.composer input:focus {
+  outline: 1px solid #4c6ef5;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #fff;
+  background: #4c6ef5;
+}
+
+button.clear {
+  background: #2c3345;
+}
+
+.metrics {
+  color: #666;
+  font-size: 0.8rem;
+  margin: 4px 0;
+}

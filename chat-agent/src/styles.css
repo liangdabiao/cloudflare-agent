@@ -1,0 +1,150 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+  background: #0f1117;
+  color: #e6e6e6;
+}
+
+.app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty {
+  color: #666;
+  background: #171a23;
+  border: 1px solid #262b38;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.empty ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.message {
+  background: #171a23;
+  border: 1px solid #262b38;
+  border-radius: 10px;
+  padding: 12px 14px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.message.user {
+  background: #1d2436;
+}
+
+.approval {
+  margin-top: 10px;
+  border: 1px solid #8a6d1f;
+  background: #2a2410;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.approval pre {
+  background: #12141b;
+  border-radius: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+}
+
+.approval-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.approve {
+  background: #2b6e4a;
+}
+
+.reject {
+  background: #7a3030;
+}
+
+.tool-result {
+  margin-top: 10px;
+}
+
+.tool-result pre {
+  background: #12141b;
+  border-radius: 6px;
+  padding: 8px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+}
+
+.composer input {
+  flex: 1;
+  background: #171a23;
+  border: 1px solid #2c3345;
+  color: #e6e6e6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 1rem;
+}
+
+.composer input:focus {
+  outline: 1px solid #4c6ef5;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #fff;
+  background: #4c6ef5;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.clear {
+  background: #2c3345;
+}

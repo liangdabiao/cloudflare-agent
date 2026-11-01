@@ -1,0 +1,19 @@
+# 依赖与构建产物
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.local
+*.log
+
+# 临时实验目录
+.scratch/
+
+# 编辑器 / 工具自动生成的配置
+.claude/
+.agents/
+skills-lock.json
+
+# 系统文件
+.DS_Store
+Thumbs.db

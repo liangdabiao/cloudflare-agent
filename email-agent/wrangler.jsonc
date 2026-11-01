@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "email-agent",
+  "main": "src/server.ts",
+  // 与 Cloudflare 官方示例保持一致：改成你实际部署当天即可
+  "compatibility_date": "2026-08-17",
+  "compatibility_flags": ["nodejs_compat"],
+  // 出站邮件绑定：remote=true 让本地 wrangler dev 也能发送真实邮件
+  "send_email": [{ "name": "EMAIL", "remote": true }],
+  // 注册邮件 Agent 的 Durable Object（SQLite 存储收件记录）
+  "durable_objects": {
+    "bindings": [{ "name": "EmailAgent", "class_name": "EmailAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["EmailAgent"] }],
+  // 开发用变量；生产环境请用 `npx wrangler secret put EMAIL_SECRET` 覆盖
+  "vars": {
+    "EMAIL_SECRET": "dev-email-secret-change-me",
+    "AGENT_DOMAIN": "348349.xyz"
+  }
+}

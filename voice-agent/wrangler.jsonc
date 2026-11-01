@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "voice-agent",
+  "main": "src/server.ts",
+  // 与 Cloudflare 官方示例保持一致：改成你实际部署当天即可
+  "compatibility_date": "2026-08-17",
+  "compatibility_flags": ["nodejs_compat"],
+  // Workers AI 绑定 —— 驱动 STT（语音转文字）、LLM、TTS（文字转语音），免 API key
+  "ai": { "binding": "AI" },
+  // 注册语音 Agent 的 Durable Object
+  "durable_objects": {
+    "bindings": [{ "name": "MyVoiceAgent", "class_name": "MyVoiceAgent" }]
+  },
+  // SQLite 迁移：对话历史持久化
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MyVoiceAgent"] }]
+}
