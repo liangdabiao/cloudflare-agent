@@ -4,7 +4,6 @@
 
 > **实测状态**：均已部署到 Cloudflare 全球网络并端到端验证，
 > 部署目标为 **Workers Free（免费）计划**，全程无需任何 LLM API key（使用 Workers AI）。
-> （Slack Agent 代码完成、类型通过，等待创建 Slack App 后接入实测）
 
 ## 五个项目一览
 
@@ -14,7 +13,7 @@
 | [voice-agent](./voice-agent) | 实时语音对话：STT（自动断句）→ LLM（含工具）→ TTS 逐句合成 | https://voice-agent.348349.xyz | ✅ 文本与语音管线打通 |
 | [email-agent](./email-agent) | 邮件收发：出站签名路由、入站解析、自动回复、防死循环、安全回复验签 | https://email-agent.348349.xyz | ✅ 出站实发成功；入站需域名收信（已配 catch-all） |
 | [browser-agent](./browser-agent) | 真实浏览器自动化：打开网页 / 读正文 / 页内 JS 求值 | https://browser-agent.348349.xyz | ✅ 单次任务 5 次真实浏览器调用全通过 |
-| [slack-agent](./slack-agent) | 多租户 Slack bot：私信 + @提及线程回复 + OAuth + 验签 | 待填入 Slack 凭据 | ⚙️ 代码完成、tsc 通过；等 Slack App 凭据 |
+| [slack-agent](./slack-agent) | 多租户 Slack bot：私信 + @提及线程回复 + OAuth + 验签 | https://slack-agent.348349.xyz | ✅ 完整链路实测通过（DM → 验签 → 路由 → Workers AI → 回复） |
 
 每个子目录都有独立的 `README.md`，包含该案例的架构说明、核心概念速查表与常见问题。
 
@@ -127,10 +126,6 @@ npx wrangler deploy
    `glm-4.7-flash` 是推理模型，思维链走独立的 `reasoning` 字段，TTS 只会读 `content`，
    但推理耗时会增加首响应延迟——语音场景建议优先选非推理的 fast 模型。
 
-8. **推理模型的 reasoning 不会进语音**
-   `glm-4.7-flash` 是推理模型，思维链走独立的 `reasoning` 字段，TTS 只会读 `content`，
-   但推理耗时会增加首响应延迟——语音场景建议优先选非推理的 fast 模型。
-
 9. **Code Mode 浏览器沙箱需要付费计划**
    文档主推的 `createBrowserTools` + `worker_loaders`（Dynamic Workers）部署时报
    错误 10195 要求升级付费。Free 计划改走文档「直接使用 Puppeteer」章节：
@@ -145,6 +140,21 @@ npx wrangler deploy
     表现为回复里出现 `[browser_eval(url=...)]` 这样的文本，结构化 tool call 丢失，
     流程中断。换 `glm-4.7-flash` 后多步工具调用稳定。模型选型对 Agent 至关重要。
 
+12. **wrangler.jsonc 的 vars 会覆盖同名 secret（错误码 10053）**
+    在 config 里声明 `vars` 再 `wrangler secret put` 同名会报
+    "Binding name already in use"，且 `deploy` 会用占位值悄悄顶掉真 secret
+    （表现为 Slack 验签恒失败）。解法：凭据一律走 secret，类型用接口合并补齐
+    （见 slack-agent/src/env-extra.d.ts）。
+
+13. **新建 Slack App 的三个隐藏开关**
+    ① 新版创建向导的 "Create and Install" 会卡在安装状态轮询——改走
+    **App Manifest** 页直接编辑 JSON，scopes/events/request_url/redirect_urls 一次搞定；
+    ② **Socket Mode 默认开启**，开着时 Slack 不投递 HTTP 事件，Request URL 永远验证不了，
+    必须先去 Socket Mode 页关掉；
+    ③ **App Home 的 Messages Tab 默认禁止用户发消息**，需在 App Home 设置勾选允许。
+    排查技巧：验证失败时先本地模拟签名请求（HMAC v0 + challenge），
+    分清是端点问题还是 Slack 配置问题。
+
 ## 官方参考（收录在仓库内）
 
 | 目录 | 说明 |
@@ -157,3 +167,5 @@ npx wrangler deploy
 ## License
 
 仅供学习使用。各子项目代码基于 Cloudflare 官方文档示例实现并补充了实测修正。
+
+致谢： https://linux.do 佬友支持

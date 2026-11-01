@@ -10,15 +10,11 @@
   "durable_objects": {
     "bindings": [{ "name": "MyAgent", "class_name": "MyAgent" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MyAgent"] }],
-  // ⚠️ 开发占位值。部署前必须替换：
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MyAgent"] }]
+  // ⚠️ 不要在这里声明 SLACK_* vars！vars 会占据绑定名导致 wrangler secret put
+  // 报错 10053（见 env-extra.d.ts —— 用类型合并补齐字段，凭据一律走 secret）：
   //   npx wrangler secret put SLACK_CLIENT_ID
   //   npx wrangler secret put SLACK_CLIENT_SECRET
   //   npx wrangler secret put SLACK_SIGNING_SECRET
-  // （secret 会覆盖同名 var；这里声明 var 只是为了让类型生成包含这些字段）
-  "vars": {
-    "SLACK_CLIENT_ID": "replace-me",
-    "SLACK_CLIENT_SECRET": "replace-me",
-    "SLACK_SIGNING_SECRET": "replace-me"
-  }
+  // 本地开发用 .dev.vars（已 gitignore）。
 }
