@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "browser-agent",
+  "main": "src/server.ts",
+  // 与 Cloudflare 官方示例保持一致：改成你实际部署当天即可
+  "compatibility_date": "2026-08-17",
+  "compatibility_flags": ["nodejs_compat"],
+  // Workers AI 绑定 —— LLM，免 API key
+  "ai": { "binding": "AI" },
+  // Browser Rendering 绑定 —— 真实浏览器。Free 计划可用，有每日时长限制
+  // 注：文档 Code Mode 方案还需 worker_loaders（Dynamic Workers，需付费）；
+  //     Free 计划用 @cloudflare/puppeteer 驱动此绑定即可（见 src/server.ts）
+  "browser": { "binding": "BROWSER" },
+  // 注册浏览器 Agent 的 Durable Object（SQLite 存消息）
+  "durable_objects": {
+    "bindings": [{ "name": "BrowserAgent", "class_name": "BrowserAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["BrowserAgent"] }]
+}

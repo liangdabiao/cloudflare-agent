@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "slack-agent",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-17",
+  "compatibility_flags": ["nodejs_compat"],
+  // Workers AI 绑定 —— LLM（文档定制章节：用 Workers AI 替代 OpenAI，免 API key）
+  "ai": { "binding": "AI" },
+  // 多租户：每个 Slack workspace（team_id）一个独立的 Agent 实例与存储
+  "durable_objects": {
+    "bindings": [{ "name": "MyAgent", "class_name": "MyAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MyAgent"] }],
+  // ⚠️ 开发占位值。部署前必须替换：
+  //   npx wrangler secret put SLACK_CLIENT_ID
+  //   npx wrangler secret put SLACK_CLIENT_SECRET
+  //   npx wrangler secret put SLACK_SIGNING_SECRET
+  // （secret 会覆盖同名 var；这里声明 var 只是为了让类型生成包含这些字段）
+  "vars": {
+    "SLACK_CLIENT_ID": "replace-me",
+    "SLACK_CLIENT_SECRET": "replace-me",
+    "SLACK_SIGNING_SECRET": "replace-me"
+  }
+}

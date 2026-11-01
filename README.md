@@ -1,17 +1,20 @@
 # Cloudflare Agents 入门实战
 
-基于 [Cloudflare Agents 官方文档](./在%20Cloudflare%20上构建%20Agents.md)（收录于本仓库）实现的 **三个可运行、已实测的 Agent 案例合集**，用于学习和快速上手 Cloudflare Agents SDK。
+基于 [Cloudflare Agents 官方文档](./在%20Cloudflare%20上构建%20Agents.md)（收录于本仓库）实现的 **五个可运行的 Agent 案例合集**，覆盖官方文档全部示例类型，用于学习和快速上手 Cloudflare Agents SDK。
 
-> **实测状态**：三个项目均已部署到 Cloudflare 全球网络并通过端到端验证，
+> **实测状态**：均已部署到 Cloudflare 全球网络并端到端验证，
 > 部署目标为 **Workers Free（免费）计划**，全程无需任何 LLM API key（使用 Workers AI）。
+> （Slack Agent 代码完成、类型通过，等待创建 Slack App 后接入实测）
 
-## 三个项目一览
+## 五个项目一览
 
 | 项目 | 能力 | 线上地址 | 实测状态 |
 |---|---|---|---|
 | [chat-agent](./chat-agent) | 流式聊天 + 服务端/客户端/人工审批 三种 tool + SQLite 消息持久化 | https://chat-agent.348349.xyz | ✅ 三种 tool 全部端到端通过 |
 | [voice-agent](./voice-agent) | 实时语音对话：STT（自动断句）→ LLM（含工具）→ TTS 逐句合成 | https://voice-agent.348349.xyz | ✅ 文本与语音管线打通 |
 | [email-agent](./email-agent) | 邮件收发：出站签名路由、入站解析、自动回复、防死循环、安全回复验签 | https://email-agent.348349.xyz | ✅ 出站实发成功；入站需域名收信（已配 catch-all） |
+| [browser-agent](./browser-agent) | 真实浏览器自动化：打开网页 / 读正文 / 页内 JS 求值 | https://browser-agent.348349.xyz | ✅ 单次任务 5 次真实浏览器调用全通过 |
+| [slack-agent](./slack-agent) | 多租户 Slack bot：私信 + @提及线程回复 + OAuth + 验签 | 待填入 Slack 凭据 | ⚙️ 代码完成、tsc 通过；等 Slack App 凭据 |
 
 每个子目录都有独立的 `README.md`，包含该案例的架构说明、核心概念速查表与常见问题。
 
@@ -37,6 +40,8 @@ cloudflare-agent/
 ├── chat-agent/                      # 案例 1：聊天 Agent（文档「聊天 Agent 示例」）
 ├── voice-agent/                     # 案例 2：语音 Agent（文档「Voice Agent 示例」）
 ├── email-agent/                     # 案例 3：邮件 Agent（文档「Email Agent 示例」）
+├── browser-agent/                   # 案例 4：浏览器 Agent（文档「Browser Agent 示例」）
+├── slack-agent/                     # 案例 5：Slack Agent（文档「Slack Agent 示例」）
 ├── agents-starter-main/             # 官方入门模板（文档快速入门引用，作对照参考）
 ├── agentic-inbox-main/              # 官方邮件 Agent 完整示例（文档 Email 章节引用，进阶参考）
 └── README.md                        # 本文件
@@ -121,6 +126,24 @@ npx wrangler deploy
 8. **推理模型的 reasoning 不会进语音**
    `glm-4.7-flash` 是推理模型，思维链走独立的 `reasoning` 字段，TTS 只会读 `content`，
    但推理耗时会增加首响应延迟——语音场景建议优先选非推理的 fast 模型。
+
+8. **推理模型的 reasoning 不会进语音**
+   `glm-4.7-flash` 是推理模型，思维链走独立的 `reasoning` 字段，TTS 只会读 `content`，
+   但推理耗时会增加首响应延迟——语音场景建议优先选非推理的 fast 模型。
+
+9. **Code Mode 浏览器沙箱需要付费计划**
+   文档主推的 `createBrowserTools` + `worker_loaders`（Dynamic Workers）部署时报
+   错误 10195 要求升级付费。Free 计划改走文档「直接使用 Puppeteer」章节：
+   `@cloudflare/puppeteer` + `browser` 绑定，把固定操作封装成 tool 给 LLM 编排。
+
+10. **Browser Rendering Free 额度很紧**
+    每天共 10 分钟浏览器时长、每 20 秒只允许启动 1 个新浏览器、3 并发。
+    连续工具调用会撞 429——browser-agent 里做了 `withBrowserRetry`（等一个窗口重试），
+    并把 `networkidle` 等待换成 `domcontentloaded` 省时间。
+
+11. **llama-4-scout 多步工具循环会把工具调用写进正文**
+    表现为回复里出现 `[browser_eval(url=...)]` 这样的文本，结构化 tool call 丢失，
+    流程中断。换 `glm-4.7-flash` 后多步工具调用稳定。模型选型对 Agent 至关重要。
 
 ## 官方参考（收录在仓库内）
 
