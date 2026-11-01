@@ -207,6 +207,66 @@ export function listen<Env extends SlackAgentBindings>(options: {
     ): Promise<Response> {
       const url = new URL(request.url);
 
+      // ── 0. 状态首页：安装入口 + 端点说明 ────────────────────────
+      if (url.pathname === "/") {
+        const html = `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cloudflare Slack Agent</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background:#0f1117; color:#e6e6e6; padding:32px 16px; }
+  main { max-width:720px; margin:0 auto; }
+  h1 { margin:0 0 4px; font-size:1.5rem; }
+  .sub { color:#888; font-size:.85rem; margin-bottom:24px; }
+  .card { background:#171a23; border:1px solid #262b38; border-radius:10px; padding:18px; margin-bottom:16px; line-height:1.7; }
+  code { background:#12141b; border-radius:6px; padding:2px 6px; font-size:.85rem; }
+  a { color:#9db4ff; }
+  .btn { display:inline-block; border:none; border-radius:8px; padding:10px 18px;
+         background:#4c6ef5; color:#fff; cursor:pointer; text-decoration:none; font-size:.95rem; }
+  ol { padding-left:20px; margin:8px 0; }
+  li { margin:4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>💬 Cloudflare Slack Agent</h1>
+  <p class="sub">多租户 Slack bot · OAuth 安装 · HMAC-SHA256 验签 · Workers AI 回复</p>
+
+  <div class="card">
+    <strong>把机器人安装到你的 Slack 工作区</strong>
+    <p style="font-size:.9rem">点击下面的按钮完成 OAuth 授权，bot token 会存入该工作区专属的
+    Durable Object 实例（每个工作区一份，互不干扰）。</p>
+    <a class="btn" href="/install">Add to Slack（安装 / 重新安装）</a>
+  </div>
+
+  <div class="card">
+    <strong>安装后的使用方式</strong>
+    <ol>
+      <li>在 Slack 里<b>私信</b>机器人（App Home 的 Messages Tab）——会自动 AI 回复</li>
+      <li>在频道里 <code>@Cloudflare Agent 你的问题</code>——会带着线程上下文在线程里回复</li>
+    </ol>
+    <p style="font-size:.85rem;color:#888">注意：Slack 事件投递需要 Event Subscriptions 的
+    Request URL 已验证，且 App Home 的 Messages Tab 允许用户发消息（见 README 踩坑 13）。</p>
+  </div>
+
+  <div class="card">
+    <strong>端点</strong>
+    <p><code>GET /install</code> — OAuth 安装入口（跳转 Slack 授权页）</p>
+    <p><code>GET /accept?code=…</code> — 授权回调，code 换 token 并入库存储</p>
+    <p><code>POST /slack</code> — Slack Events API 事件入口（HMAC-SHA256 验签 + url_verification 握手）</p>
+  </div>
+</main>
+</body>
+</html>`;
+        return new Response(html, {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      }
+
       // ── 1. 安装入口：跳转 Slack 授权页 ─────────────────────────
       if (url.pathname === "/install") {
         const authUrl = new URL("https://slack.com/oauth/v2/authorize");
