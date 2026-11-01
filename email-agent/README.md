@@ -81,6 +81,28 @@ npx wrangler secret put EMAIL_SECRET
 npx wrangler deploy
 ```
 
+## 线上实测记录（Free 计划）
+
+本项目已部署并完成验证（线上地址见仓库总 README）：
+
+| 验证项 | 方法 | 结果 |
+|---|---|---|
+| 域名接入 | Email Routing 启用 + `POST /email/routing/dns` | ✅ MX×3 + SPF + DKIM 自动生成，status=ready |
+| 出站发送 | 线上 `/test-send?to=...` | ✅ 返回 messageId，QQ 邮箱实际收到 |
+| 收件地址验证 | `POST /accounts/{id}/email/routing/addresses` | ✅ 立即返回 verified，但**生效有约 2 分钟延迟** |
+| 测试端点 | `GET /emails` | ✅ 返回收件记录 JSON |
+| catch-all 路由 | `PUT /zones/{id}/email/routing/rules/catch_all` | ✅ 全域邮件投递到 Worker |
+
+**实测要点**：
+
+- `send_email` 报 "destination address is not a verified address" 时，
+  先查 API 里地址是否 verified（created/verified 时间戳相同也可信），**再等 2 分钟重试**
+- 本地 dev 的 `send_email`（remote:true）依赖远程代理，网络受限环境可能超时——
+  直接部署后从线上触发测试更可靠
+- 入站邮件无法本地测试：Email Service 只投递到**已部署**的 Worker
+- 新增状态字段时注意 `this.state` 首次访问是 `undefined`（本项目实测踩到，
+  已在 `onEmail`/`getEmails` 用可选链防御）
+
 ## 常见错误码（sendEmail / replyToEmail）
 
 | 错误码 | 含义 | 处理 |

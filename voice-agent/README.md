@@ -88,6 +88,25 @@ export class MyVoiceAgent extends VoiceAgent<Env> {
 }
 ```
 
+## 线上实测记录（Free 计划）
+
+本项目已部署并完成端到端验证（线上地址见仓库总 README）：
+
+| 验证项 | 方法 | 结果 |
+|---|---|---|
+| WebSocket 连接 | 浏览器打开页面 | ✅ 显示"已连接"，状态机 idle 正常 |
+| 文本 → LLM → TTS 管线 | 页面文本框发送 "What time is it right now?" | ✅ 触发 get_current_time 工具，语音回复 "It's 9:55 AM right now." |
+| 无麦克风测试路径 | sendText() | ✅ 跳过 STT 直接走 LLM+TTS，调试利器 |
+| 模型付费墙 | kimi-k2.6 → "No response generated" | ❌ Free 不可用 → 换 glm-4.7-flash 后 ✅ |
+
+**实测要点**：
+
+- **"No response generated" 不一定是管线问题**——先查模型是否 Free 可用
+  （`GET /accounts/{id}/ai/models/search`，看 `require_workers_paid`）
+- glm-4.7-flash 是推理模型，`reasoning` 思维链不进语音但增加首响应延迟（约 2-4 秒），
+  对延迟敏感可换 `llama-3.3-70b-instruct-fp8-fast`
+- STT 用的是 `WorkersAIFluxSTT`（Flux 模型），同样消耗 Workers AI 额度
+
 ## 常见问题
 
 **启动报 `Not logged in` / `CLOUDFLARE_API_TOKEN`**

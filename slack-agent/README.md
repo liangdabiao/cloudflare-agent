@@ -51,6 +51,48 @@ npx wrangler secret put SLACK_SIGNING_SECRET
 安装到 workspace：浏览器访问 `https://<部署地址>/install` → Allow → 显示
 "Successfully registered!" 后即可在 Slack 里私信或 @机器人。
 
+## 线上实测记录（Free 计划）
+
+本项目已部署并完成端到端验证（线上地址见仓库总 README）：
+
+| 验证项 | 方法 | 结果 |
+|---|---|---|
+| `/slack` 验签 | 本地模拟签名 challenge 请求（HMAC v0） | ✅ 正确回显 challenge；无签名请求正确 401 |
+| Request URL 验证 | Slack App Manifest 保存触发 | ✅ "Request URL Verified" |
+| OAuth 流程 | `/install` → Allow → `/accept` | ✅ "Successfully registered!"，bot token 存入 DO |
+| 事件投递 + AI 回复 | Slack 里 DM 机器人 | ✅ "你好，请用一句话自我介绍" → Workers AI 中文回复 |
+
+完整链路：`Slack DM → POST /slack（HMAC 验签）→ team_id 路由到 DO
+→ fetchConversation 拉上下文 → Workers AI 生成 → chat.postMessage 回复`。
+
+**bot token 存在哪？** OAuth `/accept` 换取后写入该 workspace 专属 Durable Object 实例的
+state（SQLite），多工作区互不可见。重新安装（再次走 /install）会覆盖更新。
+
+## 实际配置全流程（含踩坑，自动化完成）
+
+本项目配置 Slack App 时踩过的坑，按时间顺序：
+
+1. **新版创建向导 "Create and Install" 会卡死**——按钮一直 disabled，
+   页面每秒轮询 `check_app_install_status` 但永不通过。
+   解法：向导里跳过 scopes/events 直接 "Create"（空 App 可创建），
+   然后走 **App Manifest** 页编辑 JSON 一次配齐：
+   `oauth_config.scopes.bot`、`settings.event_subscriptions`（request_url + bot_events）、
+   `oauth_config.redirect_urls`。
+2. **Socket Mode 默认开启**——开着时 Slack 不投递 HTTP 事件，Request URL 永远
+   验证不了。去 Socket Mode 页把 "Enable Socket Mode" 关掉。
+3. **App Home 的 Messages Tab 默认禁止用户发消息**（"向此应用发送消息的功能已关闭"）
+   ——去 App Home 设置勾选 "Allow users to send Slash commands and messages"。
+4. **Request URL 验证失败时先自测**：用 Signing Secret 在本地算 HMAC v0 签名，
+   curl 一个签名过的 challenge 请求到自己的端点——能回显 challenge 就说明端点没问题，
+   问题在 Slack 配置（本项目靠这招发现了坑 5）。
+5. **wrangler.jsonc 的 vars 会顶掉同名 secret**（错误 10053；deploy 也会用占位值
+   覆盖 secret）——凭据一律 `wrangler secret put`，类型用接口合并补齐
+   （见 `src/env-extra.d.ts`）。
+6. **OAuth 需要 Redirect URL**：`oauth_config.redirect_urls` 加上
+   `https://<部署地址>/accept`，否则 `/install` 跳转授权后回不来。
+
+## 核心概念速查（学习重点）
+
 ## 核心概念速查（学习重点）
 
 ### `src/slack.ts`（基类）
@@ -73,6 +115,14 @@ npx wrangler secret put SLACK_SIGNING_SECRET
 | `normalizeForLLM()` | 自己的消息 → `assistant`，用户的 → `user`；`<@UXXX>` 替换掉 |
 | `generateAIReply()` | `streamText` 流式收集为完整文本（Slack 是整条发送，不是流式） |
 | 事件幂等 | Slack 会重试投递，同一 `event_id` 只处理一次 |
+
+## 自动化配置（可选阅读）
+
+本项目的 Slack App 全套配置（创建 App、加 Scopes、关 Socket Mode、
+验证 Request URL、加 Redirect URL、读取凭据、点 Allow 授权、发送测试 DM）
+是由 AI 通过 [BrowserSkill](https://github.com/Tencent/BrowserSkill) 驱动
+**真实登录的 Chrome** 自动完成的——包括绕过向导卡死、修复 secret 覆盖问题。
+配置 Slack App 时遇到同类问题，可直接参照上面的踩坑顺序操作。
 
 ## 与文档示例的差异
 

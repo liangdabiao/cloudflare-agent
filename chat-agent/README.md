@@ -61,6 +61,26 @@ npm run deploy
 部署后得到 `https://chat-agent.<你的子域>.workers.dev`。
 消息持久化在 Durable Object 的 SQLite 中，空闲时 Agent 会休眠（hibernate）以节省资源。
 
+## 线上实测记录（Free 计划）
+
+本项目已部署并完成端到端验证（线上地址见仓库总 README）：
+
+| 验证项 | 方法 | 结果 |
+|---|---|---|
+| 服务端 tool（getWeather） | 浏览器发送 "What is the weather in Tokyo?" | ✅ 工具卡片展示结果，回答引用天气数据 |
+| 客户端 tool（getUserTimezone） | 发送 "What timezone am I in?" | ✅ 浏览器返回 Asia/Shanghai，LLM 续答 |
+| 人工审批（calculate） | 发送 "What is 5000 times 3?" | ✅ 弹出参数卡片 + Approve/Reject，批准后返回 15000 |
+| SQLite 持久化 | 刷新页面 / Clear history | ✅ 刷新后历史仍在 |
+| 流式输出 | 观察回复渲染 | ✅ 逐词流式（换 provider 后无重复） |
+
+**调试技巧**（本项目实测时用过）：
+
+- 手动测试 Agent 路由时 URL 是 kebab-case：`/agents/chat-agent/default`（不是 `ChatAgent`），
+  大小写错误会得到 400 "Invalid request"
+- 普通 GET 打到 Agent 端点返回 400 是**正常的**（该端点只接受 WebSocket 升级）
+- 排查流式问题可以最小化复现：写一个只含 `streamText + textStream` 的临时 Worker，
+  逐层排除 provider / 框架 / 模型的问题（本项目靠这招定位了 provider 重复 bug）
+
 ## 核心概念速查（学习重点）
 
 ### 服务端 `src/server.ts`

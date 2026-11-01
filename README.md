@@ -21,15 +21,18 @@
 
 | 概念 | 在哪个项目体现 |
 |---|---|
-| Agents SDK / Durable Object：每个 Agent 一个有状态实例 | 三个项目全部 |
-| SQLite 持久化（消息 / 对话 / 收件记录） | chat（消息）、voice（对话）、email（收件） |
-| Agent 控制循环（streamText + tool + stopWhen） | chat、voice |
+| Agents SDK / Durable Object：每个 Agent 一个有状态实例 | 五个项目全部 |
+| SQLite 持久化（消息 / 对话 / 收件记录） | chat（消息）、voice（对话）、email（收件）、slack（凭据） |
+| Agent 控制循环（streamText + tool + stopWhen） | chat、voice、browser、slack |
 | 三种 tool：服务端自动执行 / 客户端浏览器作答 / 人工审批 | chat |
 | `withVoice` mixin：STT、分句、TTS、打断检测、延迟指标 | voice |
+| 真实浏览器自动化：Browser Rendering 绑定 + Puppeteer 工具编排 | browser |
 | 邮件路由 resolver：地址路由 / 安全回复验签 / 兜底 | email |
-| `routeAgentRequest` / `routeAgentEmail`：请求 → Agent 实例 | chat、voice / email |
-| Workers AI 绑定（免 API key 的模型调用） | 三个项目全部 |
-| 多项目部署 + 自定义域名绑定 | 三个项目全部 |
+| Slack 集成：OAuth 2.0、HMAC-SHA256 验签、team_id 多租户路由 | slack |
+| `routeAgentRequest` / `routeAgentEmail`：请求 → Agent 实例 | chat、voice、browser / email |
+| Workers AI 绑定（免 API key 的模型调用）+ Free 计划模型选型 | 五个项目全部 |
+| 多项目部署 + 自定义域名绑定（workers.dev 被墙的解法） | 五个项目全部 |
+| wrangler vars 与 secret 的冲突、接口合并补类型 | slack |
 
 ## 目录结构
 
@@ -70,23 +73,37 @@ cd voice-agent && npm install && npx wrangler types && npm run dev
 cd email-agent && npm install && npx wrangler types && npm run dev
 #    curl "http://localhost:8787/test-send?to=you@example.com"   # 出站
 #    入站见 email-agent/README.md（部署 + catch-all 路由）
+
+# 4. 浏览器 Agent（Browser Rendering Free 有每日时长限制）
+cd browser-agent && npm install && npx wrangler types && npm run dev
+#    "Open https://example.com and tell me the exact h1 heading text."
+
+# 5. Slack Agent（需先创建 Slack App，步骤见 slack-agent/README.md）
+cd slack-agent && npm install && npx wrangler types && npm run dev
 ```
 
 ## 部署
 
 ```bash
-# chat / voice（含前端构建）
+# chat / voice / browser（含前端构建）
 npm run deploy        # = vite build + wrangler deploy
 
-# email（纯 Worker）
+# email / slack（纯 Worker）
 npx wrangler deploy
+
+# slack 还需注入凭据（见 slack-agent/README.md）：
+npx wrangler secret put SLACK_CLIENT_ID
+npx wrangler secret put SLACK_CLIENT_SECRET
+npx wrangler secret put SLACK_SIGNING_SECRET
 ```
 
-可选：绑定自定义域名（`workers.dev` 在部分地区网络不可达，自定义域名走 Cloudflare 代理更稳）：
+**自定义域名（强烈建议）**：`workers.dev` 在部分地区网络不可达。
+API 一条命令绑定（也可在仪表板操作）：
 
 ```bash
-# 仪表板：Workers & Pages → 你的 Worker → Settings → Domains & Routes → Add Custom Domain
-# 或 API：PUT /accounts/{account_id}/workers/domains
+curl -X PUT -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"zone_id":"<zone_id>","hostname":"chat-agent.你的域名","service":"chat-agent","environment":"production"}' \
+  "https://api.cloudflare.com/client/v4/accounts/{account_id}/workers/domains"
 ```
 
 ## Free 计划实测踩坑记录（最有价值的部分）
@@ -154,6 +171,12 @@ npx wrangler deploy
     ③ **App Home 的 Messages Tab 默认禁止用户发消息**，需在 App Home 设置勾选允许。
     排查技巧：验证失败时先本地模拟签名请求（HMAC v0 + challenge），
     分清是端点问题还是 Slack 配置问题。
+
+14. **配置 Redirect URL 也会遇到同样的表单保存问题**
+    OAuth & Permissions 页的 "Add New Redirect URL" 输入框程序化填写后
+    Save 按钮不启用——同样走 App Manifest 的 `oauth_config.redirect_urls` 解决。
+    经验：Slack 新版设置页的 React 表单对程序化输入不敏感，
+    凡是能走 App Manifest 的配置优先走 Manifest。
 
 ## 官方参考（收录在仓库内）
 
