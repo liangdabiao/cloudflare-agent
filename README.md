@@ -23,9 +23,9 @@
 
 > **案例 7（opc-agent）值得单独说一句**：它不是「调用模型」的演示，而是
 > **把一套人类 SOP（[opc-ops](https://github.com/liangdabiao/opc-ops-skill)）改造成 Agent**。
-> 25 条风险规则与金额计算移植为 Worker 内的确定性工具（零 token、结果可复现），
-> 模型只负责判断与话术；知识按阶段渐进注入；项目档案存 SQLite 补上原 skill 缺失的记忆。
-> 附 `npm run test:logic` 与原版 Python 的黄金输对比（20/20 通过）。
+> 只有算术（金额分期/结算）与模板拼装保留为确定性工具（零 token、结果可复现）；
+> **阶段判断、风险结论、话术全部交给模型**——因为 SOP 里大部分内容本就是模糊判断。
+> 附 `npm run test:logic` 与原版 Python 的黄金输出对比（20/20 通过）。
 
 ## 你将学到什么
 
@@ -40,8 +40,8 @@
 | 邮件路由 resolver：地址路由 / 安全回复验签 / 兜底 | email |
 | Slack 集成：OAuth 2.0、HMAC-SHA256 验签、team_id 多租户路由 | slack |
 | RAG：bge-m3 嵌入 + Vectorize 相似度检索 + 引用作答 | rag |
-| **把人类 SOP 变成 Agent**：确定性工具 vs LLM 判断的边界划分 | opc |
-| 渐进式知识注入：按阶段只加载需要的资料（省 token、降干扰） | opc |
+| **把人类 SOP 变成 Agent**：哪些该做成确定性工具、哪些必须留给模型判断 | opc |
+| 渐进式加载（模型驱动）：起步注入一份资料，其余由模型自己按需取 | opc |
 | 业务状态建模：项目/知识库/收件记录存 DO SQLite，跨会话保留 | opc、rag、email |
 | 迁移正确性验证：脚本化对比原版（Python）黄金输出 | opc |
 | `routeAgentRequest` / `routeAgentEmail`：请求 → Agent 实例 | chat、voice、browser / email |
@@ -217,6 +217,14 @@ curl -X PUT -H "Authorization: Bearer <token>" -H "Content-Type: application/jso
     "used up your daily free allocation"，**次日（UTC 0 点）重置**。
     省额度技巧：调试期用 REST 直调验证单个环节（嵌入很便宜，大头是 LLM 对话）；
     Vectorize 不消耗 Neurons（按查询/存储向量维度独立计费）。
+
+17. **把 SOP 做成 Agent 时，别把"判断"规则化**
+    踩过的坑：把 skill 的 19 条关键词做成硬路由（唯一阶段）、提示词写"阶段以系统为准
+    不要改判"、只注入单一阶段知识、强制四段式输出。结果最有价值的模糊输入
+    （「整体还行，但那个啥你再改改」）关键词命中 0 条，模型被绑住手脚。
+    正确做法：**算术与字符串操作确定性化，语义判断留给模型**；
+    关键词只做"候选线索"，并给模型 `read_reference` 按需取资料的工具。
+    判断标准很简单：这个环节出错时，用户能否一眼看出？（算错钱能看出，判错阶段不能）
 
 ## 官方参考（收录在仓库内）
 
