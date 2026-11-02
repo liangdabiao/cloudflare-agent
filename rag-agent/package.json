@@ -1,0 +1,30 @@
+{
+  "name": "rag-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "deploy": "npm run build && wrangler deploy",
+    "check": "tsc",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "^4.0.163",
+    "@cloudflare/ai-chat": "^0.12.2",
+    "agents": "^0.32.0",
+    "ai": "^7.0.159",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zod": "^4.1.14"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.66.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.4",
+    "wrangler": "4.156.0"
+  }
+}

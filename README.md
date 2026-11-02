@@ -1,13 +1,13 @@
 # Cloudflare Agents 入门实战
 
-基于 [Cloudflare Agents 官方文档](./在%20Cloudflare%20上构建%20Agents.md)（收录于本仓库）实现的 **五个可运行的 Agent 案例合集**，覆盖官方文档全部示例类型，用于学习和快速上手 Cloudflare Agents SDK。
+基于 [Cloudflare Agents 官方文档](./在%20Cloudflare%20上构建%20Agents.md)（收录于本仓库）实现的 **六个可运行的 Agent 案例合集**（五案例来自官方文档 + 一个 RAG 扩展案例），用于学习和快速上手 Cloudflare Agents SDK。
 
 > **实测状态**：均已部署到 Cloudflare 全球网络并端到端验证，
 > 部署目标为 **Workers Free（免费）计划**，全程无需任何 LLM API key（使用 Workers AI）。
 
 参考文档：https://cloudflaredoc.ubitools.com/agents/
 
-## 五个项目一览
+## 六个项目一览
 
 | 项目 | 能力 | 线上地址 | 实测状态 |
 |---|---|---|---|
@@ -16,6 +16,7 @@
 | [email-agent](./email-agent) | 邮件收发：出站签名路由、入站解析、自动回复、防死循环、安全回复验签 | https://email-agent.348349.xyz | ✅ 出站实发成功；入站需域名收信（已配 catch-all） |
 | [browser-agent](./browser-agent) | 真实浏览器自动化：打开网页 / 读正文 / 页内 JS 求值 | https://browser-agent.348349.xyz | ✅ 单次任务 5 次真实浏览器调用全通过 |
 | [slack-agent](./slack-agent) | 多租户 Slack bot：私信 + @提及线程回复 + OAuth + 验签 | https://slack-agent.348349.xyz | ✅ 完整链路实测通过（DM → 验签 → 路由 → Workers AI → 回复） |
+| [rag-agent](./rag-agent) | Agentic RAG：bge-m3 嵌入 + Vectorize 检索（做成 Agent 工具）+ 知识库管理面板 | https://rag-agent.348349.xyz | ⚙️ 部署完成、Vectorize 已验证；e2e 待 Workers AI 每日额度重置（见踩坑 16） |
 
 每个子目录都有独立的 `README.md`，包含该案例的架构说明、核心概念速查表与常见问题。
 
@@ -46,6 +47,8 @@ cloudflare-agent/
 ├── email-agent/                     # 案例 3：邮件 Agent（文档「Email Agent 示例」）
 ├── browser-agent/                   # 案例 4：浏览器 Agent（文档「Browser Agent 示例」）
 ├── slack-agent/                     # 案例 5：Slack Agent（文档「Slack Agent 示例」）
+├── rag-agent/                       # 案例 6：RAG Agent（Workers AI + Vectorize 扩展案例）
+├── docs/                            # 调研报告（OpenAI Agents SDK 迁移评估、Pi harness）
 ├── agents-starter-main/             # 官方入门模板（文档快速入门引用，作对照参考）
 ├── agentic-inbox-main/              # 官方邮件 Agent 完整示例（文档 Email 章节引用，进阶参考）
 └── README.md                        # 本文件
@@ -186,6 +189,13 @@ curl -X PUT -H "Authorization: Bearer <token>" -H "Content-Type: application/jso
     反复调用客户端工具，就是"工具→新请求→再调工具"的无限循环。
     双重解法（见 chat-agent）：① 选工具调用稳定的模型（glm-4.7-flash）；
     ② 客户端 `onToolCall` 里做续跑计数护栏（如每条用户消息最多 3 轮）。
+
+16. **Workers AI Free 每日 10,000 Neurons 额度，烧完即 429**
+    LLM 每 token、嵌入每次调用都消耗 Neurons。密集实测一天（多轮对话修复验证 +
+    语音 + Slack + 浏览器多步循环）就能耗尽，之后所有 AI 调用报
+    "used up your daily free allocation"，**次日（UTC 0 点）重置**。
+    省额度技巧：调试期用 REST 直调验证单个环节（嵌入很便宜，大头是 LLM 对话）；
+    Vectorize 不消耗 Neurons（按查询/存储向量维度独立计费）。
 
 ## 官方参考（收录在仓库内）
 

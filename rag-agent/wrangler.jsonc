@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rag-agent",
+  "main": "src/server.ts",
+  // 与 Cloudflare 官方示例保持一致：改成你实际部署当天即可
+  "compatibility_date": "2026-08-17",
+  "compatibility_flags": ["nodejs_compat"],
+  // Workers AI：嵌入（bge-m3）+ 生成（glm-4.7-flash），免 API key
+  "ai": { "binding": "AI" },
+  // Vectorize 向量数据库绑定（索引需先创建）：
+  //   npx wrangler vectorize create rag-knowledge-base --dimensions=1024 --metric=cosine
+  // 1024 维对应 @cf/baai/bge-m3 嵌入模型（多语言，中文友好）
+  "vectorize": [{ "binding": "VECTORIZE", "index_name": "rag-knowledge-base" }],
+  // 注册 RAG Agent 的 Durable Object（原文与元数据存 SQLite）
+  "durable_objects": {
+    "bindings": [{ "name": "RagAgent", "class_name": "RagAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RagAgent"] }]
+}
