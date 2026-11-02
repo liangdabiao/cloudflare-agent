@@ -166,10 +166,34 @@ const ROUTES: Array<{ stage: Stage; rx: RegExp }> = [
   { stage: "A2", rx: /(复盘|亏了|这单赔|为什么亏|总结一下这单)/ },
 ];
 
-/** 判定当前阶段；无匹配返回 general */
+/** 判定当前阶段；无匹配返回 general（保留给需要单一结果的地方） */
 export function routeStage(text: string): StageMeta {
+  return routeCandidates(text)[0]?.meta ?? STAGES.general;
+}
+
+export interface StageCandidate {
+  meta: StageMeta;
+  /** 关键词命中次数（不是置信度，只是热度） */
+  score: number;
+}
+
+/**
+ * 给出**候选**阶段，而不是唯一答案。
+ *
+ * 为什么是候选：客户原话大多是模糊的——「整体还行，但那个啥你再改改」既像验收、
+ * 又像变更、还像压价。硬判成一个编号然后按那个 SOP 说话，是最坏的做法。
+ * 这里只提供"可能相关的几个方向"给模型参考，最终判断权归模型。
+ */
+export function routeCandidates(text: string, limit = 3): StageCandidate[] {
+  const scores = new Map<Stage, number>();
   for (const r of ROUTES) {
-    if (r.rx.test(text)) return STAGES[r.stage];
+    const global = new RegExp(r.rx.source, "g");
+    const m = text.match(global);
+    if (m?.length) scores.set(r.stage, (scores.get(r.stage) ?? 0) + m.length);
   }
-  return STAGES.general;
+  const list = [...scores.entries()]
+    .map(([stage, score]) => ({ meta: STAGES[stage], score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+  return list.length ? list : [{ meta: STAGES.general, score: 0 }];
 }

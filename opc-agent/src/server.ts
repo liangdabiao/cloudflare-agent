@@ -25,7 +25,12 @@ import { z } from "zod";
 
 import { scanText, buildRiskReport } from "./lib/risk-scan";
 import { splitDeal, settleDeal, maintainDeal } from "./lib/deal-calc";
-import { routeStage, STAGES, type Stage } from "./lib/stage-router";
+import {
+  routeStage,
+  routeCandidates,
+  STAGES,
+  type Stage,
+} from "./lib/stage-router";
 import { extractProject } from "./lib/extract-project";
 import {
   renderTemplate,
@@ -230,7 +235,9 @@ export class OpcAgent extends AIChatAgent<Env, OpcState> {
       lastUser?.parts
         ?.map((p) => (p.type === "text" ? p.text : ""))
         .join(" ") ?? "";
-    const stage = routeStage(lastText);
+    // 阶段：只给**候选线索**，判断权留给模型（模糊表述下关键词必然误判）
+    const candidates = routeCandidates(lastText);
+    const primary = candidates[0].meta;
 
     // 确定性建档：命中「客户名 + 金额」就落库（不依赖模型判断，避免漏建）
     const extracted = extractProject(lastText);
@@ -241,42 +248,60 @@ export class OpcAgent extends AIChatAgent<Env, OpcState> {
       await this.upsertProject(extracted);
     }
 
+    const candidateLines = candidates
+      .map(
+        (c) =>
+          `- ${c.meta.id} ${c.meta.label}（关键词命中 ${c.score} 次）` +
+          (c.meta.actions.length
+            ? `：${c.meta.actions.join("；")}`
+            : ""),
+      )
+      .join("\n");
+
     const system = `你是「OPC 经营与接单交付」顾问，服务对象是接私活/做外包的独立开发者。
 你的价值不是帮人写代码，而是帮用户在正确的时点做正确的动作、留下正确的书面痕迹。
 
 ${CORE_PRINCIPLES}
 
-## 当前判定阶段
-${stage.id} ${stage.label}
-（**阶段以这里为准**，不要自行改判成别的编号；即使话题相邻也按本阶段流程走）
-该阶段必做动作：
-${stage.actions.map((a, i) => `${i + 1}. ${a}`).join("\n") || "（通用咨询，按用户问题给出最相关的一步）"}
-该阶段可用资料：${stage.resource ?? "无"}
+## 阶段线索（仅供参考，不是路由指令）
+${candidateLines}
+
+这些只是关键词匹配出来的**可能方向**，不是答案。用户的话大多是模糊的：
+「整体还行，但那个啥你再改改」既可能是验收、也可能是变更、还可能是压价——
+**最终由你判断**，你可以改判、同时覆盖多个阶段、指出判断依据，或者干脆先反问一句。
+用户的处境比编号重要。
 
 ## 当前项目
 ${projectBrief(this.activeProject)}
 
-## 本阶段知识（据此回答，不要凭印象编条款或数字）
-${knowledgeFor(stage.id)}
+## 起步知识（下面是与你可能相关的阶段资料；不够用就调 read_reference 取）
+${knowledgeFor(primary.id)}
 
 ## 工具使用规则（重要）
 - 涉及金额拆分/结算/维护报价 → 必须调用 calc_deal，**绝不自己算**
-- 涉及判断客户靠不靠谱、聊天记录分析 → 必须调用 scan_client_risk
+- 风险扫描 → 调 scan_client_risk，但它只是**文本匹配的初步信号**：
+  它给的红线/正向是线索，最终"接不接"要结合三问（预算数字 / 时间点 / 可量化效果）
+  和你对语气的理解来判断。你对它的机械结论有异议时，说明理由后按你的判断说，
+  并把"脚本命中什么、你为什么不完全同意"讲清楚。
+- 需要某个阶段的详细资料（合同条款、交付流程、经营打法…）→ 调 read_reference
 - 涉及生成合同/报价单/需求文档/周报/验收清单等 → 必须调用 render_doc
 - 生成文档的正确做法：**先用已知信息生成草稿**（未提供的占位符会原样保留），
   再把工具返回的 missing 清单一次性问用户补齐。
   不要因为缺几条信息就完全不生成——用户要的是能马上改的底稿。
-- 用户提到客户名称与金额 → 主动调用 save_project 建档（便于后续追踪）
-- 工具返回了什么就基于什么说，不要改成自己的估算
+- 用户提到客户名称与金额 → 可调 save_project 补全项目档案
+- 工具返回什么就基于什么说，不要把自己的估算说成工具结果
 
-## 输出格式（用户问接单/交付类问题时）
-**阶段判断** → **必做动作（可执行步骤）** → **产出物（调工具生成）** → **本条红线（一句话警告）**
+## 输出方式
+接单/交付类问题，通常按这个顺序说会更清楚：
+判断结论 → 现在该做哪几步 → 要产出什么（能调工具就调工具）→ 一句话点明最该防的那条风险。
+但**不要机械套模板**：用户只是随口问一句、或者情况还没清楚时，
+先用一两句话把关键点说透、必要时反问，比凑齐四段更有价值。
 
 ## 语气与边界
 - 直接、可执行、不绕弯。用户问"要不要接"就给明确结论和理由，不要罗列一堆"取决于"。
-- 但不要在用户没问的时候把整套 SOP 倒出来——只输出当前阶段需要的那几步。
+- 但不要在用户没问的时候把整套 SOP 倒出来——只给当下用得上的那几步。
 - 合同/条款是结构与清单参考，不构成法律意见；涉及签约时提醒找律师复核。
-- 金额一律用工具算，风险一律用工具扫。`;
+- 金额交给工具算。`;
 
     const result = streamText({
       model: ai("@cf/zai-org/glm-4.7-flash"),
@@ -387,6 +412,30 @@ ${knowledgeFor(stage.id)}
               projectId: project.id,
               stage: project.stage,
               summary: projectBrief(project),
+            };
+          },
+        }),
+
+        // ── 工具 5：按需取资料（渐进式加载由模型自己决定，而不是关键词）──
+        read_reference: tool({
+          description:
+            "读取某个阶段的详细手册（客户筛选/合同与付款/交付与验收/一人公司打法）。当当前注入的知识不够、或用户的问题跨了多个阶段时调用。",
+          inputSchema: z.object({
+            name: z
+              .enum(Object.keys(REFERENCES) as [string, ...string[]])
+              .describe(
+                "client-screening=客户筛选与红线, contract-and-payment=报价合同定金, delivery-and-acceptance=需求交付验收尾款, opc-playbook=一人公司方向与复盘",
+              ),
+          }),
+          execute: async ({ name }) => {
+            const raw = REFERENCES[name] ?? "";
+            return {
+              name,
+              chars: raw.length,
+              content:
+                raw.length > 8000
+                  ? raw.slice(0, 8000) + "\n\n（已截断）"
+                  : raw,
             };
           },
         }),
