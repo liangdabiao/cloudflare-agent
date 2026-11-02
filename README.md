@@ -1,13 +1,13 @@
 # Cloudflare Agents 入门实战
 
-基于 [Cloudflare Agents 官方文档](./在%20Cloudflare%20上构建%20Agents.md)（收录于本仓库）实现的 **六个可运行的 Agent 案例合集**（五案例来自官方文档 + 一个 RAG 扩展案例），用于学习和快速上手 Cloudflare Agents SDK。
+基于 [Cloudflare Agents 官方文档](./在%20Cloudflare%20上构建%20Agents.md)（收录于本仓库）实现的 **七个可运行的 Agent 案例合集**（五案例来自官方文档 + RAG 与 OPC 两个扩展案例），用于学习和快速上手 Cloudflare Agents SDK。
 
 > **实测状态**：均已部署到 Cloudflare 全球网络并端到端验证，
 > 部署目标为 **Workers Free（免费）计划**，全程无需任何 LLM API key（使用 Workers AI）。
 
 参考文档：https://cloudflaredoc.ubitools.com/agents/
 
-## 六个项目一览
+## 七个项目一览
 
 | 项目 | 能力 | 线上地址 | 实测状态 |
 |---|---|---|---|
@@ -17,24 +17,36 @@
 | [browser-agent](./browser-agent) | 真实浏览器自动化：打开网页 / 读正文 / 页内 JS 求值 | https://browser-agent.348349.xyz | ✅ 单次任务 5 次真实浏览器调用全通过 |
 | [slack-agent](./slack-agent) | 多租户 Slack bot：私信 + @提及线程回复 + OAuth + 验签 | https://slack-agent.348349.xyz | ✅ 完整链路实测通过（DM → 验签 → 路由 → Workers AI → 回复） |
 | [rag-agent](./rag-agent) | Agentic RAG：bge-m3 嵌入 + Vectorize 检索（做成 Agent 工具）+ 知识库管理面板 | https://rag-agent.348349.xyz | ⚙️ 部署完成、Vectorize 已验证；e2e 待 Workers AI 每日额度重置（见踩坑 16） |
+| [opc-agent](./opc-agent) | 接单交付经营系统：B1~B11 阶段流程 + 25 条风险规则 + 金额计算 + 8 份模板 + 项目工作台 | https://opc-agent.348349.xyz | ✅ 风控/分期/模板/自动建档全部实测通过 |
 
 每个子目录都有独立的 `README.md`，包含该案例的架构说明、核心概念速查表与常见问题。
+
+> **案例 7（opc-agent）值得单独说一句**：它不是「调用模型」的演示，而是
+> **把一套人类 SOP（[opc-ops](https://github.com/liangdabiao/opc-ops-skill)）改造成 Agent**。
+> 25 条风险规则与金额计算移植为 Worker 内的确定性工具（零 token、结果可复现），
+> 模型只负责判断与话术；知识按阶段渐进注入；项目档案存 SQLite 补上原 skill 缺失的记忆。
+> 附 `npm run test:logic` 与原版 Python 的黄金输对比（20/20 通过）。
 
 ## 你将学到什么
 
 | 概念 | 在哪个项目体现 |
 |---|---|
-| Agents SDK / Durable Object：每个 Agent 一个有状态实例 | 五个项目全部 |
-| SQLite 持久化（消息 / 对话 / 收件记录） | chat（消息）、voice（对话）、email（收件）、slack（凭据） |
-| Agent 控制循环（streamText + tool + stopWhen） | chat、voice、browser、slack |
+| Agents SDK / Durable Object：每个 Agent 一个有状态实例 | 七个项目全部 |
+| SQLite 持久化（消息 / 对话 / 收件记录） | chat（消息）、voice（对话）、email（收件）、slack（凭据）、rag（知识库）、opc（项目档案） |
+| Agent 控制循环（streamText + tool + stopWhen） | chat、voice、browser、slack、rag、opc |
 | 三种 tool：服务端自动执行 / 客户端浏览器作答 / 人工审批 | chat |
 | `withVoice` mixin：STT、分句、TTS、打断检测、延迟指标 | voice |
 | 真实浏览器自动化：Browser Rendering 绑定 + Puppeteer 工具编排 | browser |
 | 邮件路由 resolver：地址路由 / 安全回复验签 / 兜底 | email |
 | Slack 集成：OAuth 2.0、HMAC-SHA256 验签、team_id 多租户路由 | slack |
+| RAG：bge-m3 嵌入 + Vectorize 相似度检索 + 引用作答 | rag |
+| **把人类 SOP 变成 Agent**：确定性工具 vs LLM 判断的边界划分 | opc |
+| 渐进式知识注入：按阶段只加载需要的资料（省 token、降干扰） | opc |
+| 业务状态建模：项目/知识库/收件记录存 DO SQLite，跨会话保留 | opc、rag、email |
+| 迁移正确性验证：脚本化对比原版（Python）黄金输出 | opc |
 | `routeAgentRequest` / `routeAgentEmail`：请求 → Agent 实例 | chat、voice、browser / email |
-| Workers AI 绑定（免 API key 的模型调用）+ Free 计划模型选型 | 五个项目全部 |
-| 多项目部署 + 自定义域名绑定（workers.dev 被墙的解法） | 五个项目全部 |
+| Workers AI 绑定（免 API key 的模型调用）+ Free 计划模型选型 | 七个项目全部 |
+| 多项目部署 + 自定义域名绑定（workers.dev 被墙的解法） | 七个项目全部 |
 | wrangler vars 与 secret 的冲突、接口合并补类型 | slack |
 
 ## 目录结构
@@ -48,6 +60,7 @@ cloudflare-agent/
 ├── browser-agent/                   # 案例 4：浏览器 Agent（文档「Browser Agent 示例」）
 ├── slack-agent/                     # 案例 5：Slack Agent（文档「Slack Agent 示例」）
 ├── rag-agent/                       # 案例 6：RAG Agent（Workers AI + Vectorize 扩展案例）
+├── opc-agent/                       # 案例 7：OPC 经营 Agent（把一套人类 SOP 变成 Agent）
 ├── docs/                            # 调研报告（OpenAI Agents SDK 迁移评估、Pi harness）
 ├── agents-starter-main/             # 官方入门模板（文档快速入门引用，作对照参考）
 ├── agentic-inbox-main/              # 官方邮件 Agent 完整示例（文档 Email 章节引用，进阶参考）
@@ -85,6 +98,14 @@ cd browser-agent && npm install && npx wrangler types && npm run dev
 
 # 5. Slack Agent（需先创建 Slack App，步骤见 slack-agent/README.md）
 cd slack-agent && npm install && npx wrangler types && npm run dev
+
+# 6. RAG Agent（需先建 Vectorize 索引）
+cd rag-agent && npm install && npx wrangler types && npm run dev
+#    npx wrangler vectorize create rag-knowledge-base --dimensions=1024 --metric=cosine
+
+# 7. OPC 经营 Agent（无需额外资源；逻辑自带本地验证）
+cd opc-agent && npm install && npx wrangler types && npm run dev
+#    npm run test:logic   # 20 项移植验证，不消耗 Workers AI 额度
 ```
 
 ## 部署

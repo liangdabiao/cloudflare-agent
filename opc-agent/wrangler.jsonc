@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "opc-agent",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-08-17",
+  "compatibility_flags": ["nodejs_compat"],
+  // Workers AI：LLM（glm-4.7-flash）。金额/风险计算在 Worker 内本地完成，不吃 Neurons
+  "ai": { "binding": "AI" },
+  // OPC 经营 Agent：项目工作台与聊天记录存 DO 的 SQLite
+  "durable_objects": {
+    "bindings": [{ "name": "OpcAgent", "class_name": "OpcAgent" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["OpcAgent"] }]
+}
