@@ -226,6 +226,13 @@ curl -X PUT -H "Authorization: Bearer <token>" -H "Content-Type: application/jso
     关键词只做"候选线索"，并给模型 `read_reference` 按需取资料的工具。
     判断标准很简单：这个环节出错时，用户能否一眼看出？（算错钱能看出，判错阶段不能）
 
+18. **LLM 的回答必须渲染 Markdown，不能当纯文本塞进 DOM**
+    踩过的坑：`{part.text}` 直接放进 `<span>`，用户看到的是满屏 `## 阶段判断`
+    `**婉拒**` 和裸露的表格竖线——模型输出本身是 Markdown，前端得负责渲染。
+    解法：`marked`（GFM：表格/列表/引用）+ `DOMPurify` 白名单消毒，
+    并给 `.md` 容器补表格/引用/代码块样式（表格要能横向滚动）。
+    四个带对话界面的案例（chat / browser / rag / opc）统一处理。
+
 ## 官方参考（收录在仓库内）
 
 | 目录 | 说明 |

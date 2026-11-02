@@ -13,6 +13,7 @@ import { useAgentChat, getToolApproval } from "@cloudflare/ai-chat/react";
 import type { DynamicToolUIPart, ToolUIPart, UIMessage } from "ai";
 import { StrictMode, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { renderMarkdown } from "./lib/markdown";
 import "./styles.css";
 
 /** tool 类型的消息 part（含审批状态），用于渲染审批 UI 与 tool 结果 */
@@ -93,9 +94,13 @@ function Chat() {
             {msg.parts.map((part, i) => {
               if (part.type === "text") {
                 return (
-                  <span key={i} className="text">
-                    {part.text}
-                  </span>
+                  <div
+                    key={i}
+                    className="md"
+                    dangerouslySetInnerHTML={{
+                      __html: renderMarkdown(part.text),
+                    }}
+                  />
                 );
               }
 

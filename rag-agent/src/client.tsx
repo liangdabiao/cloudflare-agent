@@ -10,6 +10,7 @@ import { useAgentChat } from "@cloudflare/ai-chat/react";
 import type { DynamicToolUIPart, ToolUIPart, UIMessage } from "ai";
 import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { renderMarkdown } from "./lib/markdown";
 import "./styles.css";
 
 type ToolPart = ToolUIPart | DynamicToolUIPart;
@@ -168,9 +169,13 @@ function Chat() {
             {msg.parts.map((part, i) => {
               if (part.type === "text") {
                 return (
-                  <span key={i} className="text">
-                    {part.text}
-                  </span>
+                  <div
+                    key={i}
+                    className="md"
+                    dangerouslySetInnerHTML={{
+                      __html: renderMarkdown(part.text),
+                    }}
+                  />
                 );
               }
               if (isToolPart(part) && part.state === "output-available") {

@@ -15,6 +15,8 @@
     "@cloudflare/ai-chat": "^0.12.2",
     "agents": "^0.32.0",
     "ai": "^7.0.159",
+    "dompurify": "^3.4.17",
+    "marked": "^18.1.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zod": "^4.1.14"

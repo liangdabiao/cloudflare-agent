@@ -148,3 +148,167 @@ button:disabled {
 button.clear {
   background: #2c3345;
 }
+
+:root {
+  --bg: #0f1117;
+  --panel: #171a23;
+  --line: #262b38;
+  --text: #e6e6e6;
+  --muted: #8b93a7;
+  --accent: #4c6ef5;
+}
+
+/* ── Markdown 渲染 ── */
+.md {
+  font-size: 0.92rem;
+  line-height: 1.75;
+}
+
+.md > *:first-child {
+  margin-top: 0;
+}
+
+.md > *:last-child {
+  margin-bottom: 0;
+}
+
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  margin: 16px 0 8px;
+  line-height: 1.35;
+  font-weight: 650;
+}
+
+.md h1 {
+  font-size: 1.15rem;
+}
+
+.md h2 {
+  font-size: 1.05rem;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.md h3 {
+  font-size: 0.98rem;
+  color: #c8d0e0;
+}
+
+.md h4 {
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.md p {
+  margin: 8px 0;
+}
+
+.md ul,
+.md ol {
+  margin: 8px 0;
+  padding-left: 22px;
+}
+
+.md li {
+  margin: 3px 0;
+}
+
+.md strong {
+  color: #fff;
+  font-weight: 650;
+}
+
+.md em {
+  color: #c8d0e0;
+}
+
+.md a {
+  color: #9db4ff;
+}
+
+.md code {
+  background: #0b0d13;
+  border: 1px solid #22283a;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.85em;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.md pre {
+  background: #0b0d13;
+  border: 1px solid #22283a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.md pre code {
+  border: none;
+  padding: 0;
+  background: none;
+  font-size: 0.82em;
+  line-height: 1.6;
+}
+
+.md blockquote {
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: #141a27;
+  border-radius: 0 6px 6px 0;
+  color: #cfd7e6;
+}
+
+.md blockquote p {
+  margin: 4px 0;
+}
+
+.md hr {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 16px 0;
+}
+
+/* 表格：模型输出里表格很多，必须能横向滚动 */
+.md table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 0.84rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.md thead th {
+  background: #1b2030;
+  color: #c8d0e0;
+  font-weight: 600;
+  text-align: left;
+  padding: 6px 9px;
+  border: 1px solid #2f3547;
+  white-space: nowrap;
+}
+
+.md tbody td {
+  padding: 6px 9px;
+  border: 1px solid #262b38;
+  vertical-align: top;
+}
+
+.md tbody tr:nth-child(even) {
+  background: #141822;
+}
+
+.md img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.md del {
+  color: var(--muted);
+}
+
